@@ -8,13 +8,16 @@ script:
 - mkdir -p ~/.local/bin
 - export PATH=$HOME/.local/bin:$PATH
 - travis_retry curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
-- stack --no-terminal install hlint stylish-haskell tokstyle
+- stack --no-terminal install hlint pandoc stylish-haskell tokstyle
 - travis_retry curl -L https://github.com/rubik/stack-hpc-coveralls/releases/download/v0.0.4.0/shc-linux-x64-7.10.3.tar.bz2 | tar -xj -C $HOME/.local/bin
 - cp -a bin $HOME/.local/
 # TODO(iphydf): Figure out how to do this more generically. How were we supposed
 # to know that this file is needed and can be found here?
 - cp $HOME/.stack/snapshots/x86_64-linux/lts-11.7/8.2.2/share/x86_64-linux-ghc-8.2.2/hlint-2.1.3/hlint.yaml $HOME/.local/bin/data/
-- tar zcf hs-tools-$TRAVIS_TAG.tar.gz -C $HOME .local/bin
+- tar zcf hs-tools-$TRAVIS_TAG.tar.gz -C $HOME
+    .local/bin
+    .stack/snapshots/x86_64-linux/lts-11.7/8.2.2/share/x86_64-linux-ghc-8.2.2/hlint-2.1.3
+    .stack/snapshots/x86_64-linux/lts-11.7/8.2.2/share/x86_64-linux-ghc-8.2.2/pandoc-2.1.2
 
 deploy:
   provider: releases
