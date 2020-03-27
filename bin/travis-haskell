@@ -21,8 +21,8 @@ travis-script() {
   export LD_LIBRARY_PATH=$HOME/.local/lib
   export PKG_CONFIG_PATH=$HOME/.local/lib/pkgconfig
   
-  NEED_SODIUM=$(stack ls dependencies --test | grep saltine > /dev/null && echo 1)
-  NEED_TOXCORE=$(grep 'extra-libraries:.*toxcore' *.cabal > /dev/null && echo 1)
+  NEED_SODIUM=$(stack ls dependencies --test | grep saltine > /dev/null && echo 1 || echo 0)
+  NEED_TOXCORE=$(grep 'extra-libraries:.*toxcore' *.cabal > /dev/null && echo 1 || echo 0)
   
   if [ -n "$NEED_SODIUM" ]; then
     NEED_TOXCORE=1
