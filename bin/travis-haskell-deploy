@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# No "set -x" here, because we don't want to print the username/password on the
+# Travis console.
+set -eu
+
+mkdir -p "$HOME/.stack/upload"
+echo "{\"username\":\"$HACKAGE_USERNAME\",\"password\":\"$HACKAGE_PASSWORD\"}" \
+  > "$HOME/.stack/upload/credentials.json"
+stack --no-terminal upload .

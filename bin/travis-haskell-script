@@ -1,0 +1,33 @@
+#!/bin/bash
+
+set -eux
+
+# Install the latest CI support tools.
+VERSION=$(curl -L -s -H 'Accept: application/json' \
+  "https://github.com/TokTok/hs-tools/releases/latest" \
+  | egrep -o '"v[0-9][^"]+"' \
+  | egrep -o '[^"]+')
+TOOLS_URL="https://github.com/Toktok/hs-tools/releases/download/$VERSION/hs-tools-$VERSION.tar.gz"
+curl -L -s "$TOOLS_URL" | tar xz -C "$HOME"
+
+# Determine the Haskell package we're building.
+PACKAGE=$(echo "$TRAVIS_REPO_SLUG" | sed -e 's|^[^/]*/hs-||')
+
+# Run the build/test/deploy (optional) cycle.
+hlint .
+stylish-haskell-lhs -i .
+git diff --exit-code
+stack --no-terminal test --coverage "$@"
+shc "$PACKAGE" testsuite
+stack sdist --tar-dir .
+
+# Check that the tag we're building and trying to release agrees with the
+# version number in Cabal.
+if [ -n "$TRAVIS_TAG" ]; then
+  VERSION="${TRAVIS_TAG/v/}"
+  if [ ! -f "$PACKAGE-$VERSION.tar.gz" ]; then
+    echo "Package versions or name mismatch"
+    ls
+    exit 1
+  fi
+fi
