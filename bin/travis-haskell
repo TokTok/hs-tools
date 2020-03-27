@@ -1,0 +1,91 @@
+#!/bin/bash
+
+set -eu
+
+# Determine the Haskell package we're building.
+PACKAGE=$(echo "$TRAVIS_REPO_SLUG" | sed -e 's|^[^/]*/hs-||')
+  
+# Usage: bash <(curl -s https://raw.githubusercontent.com/TokTok/hs-tools/master/bin/travis-haskell) script
+travis-script() {
+  # Install the latest CI support tools.
+  VERSION=$(curl -L -s -H 'Accept: application/json' \
+    "https://github.com/TokTok/hs-tools/releases/latest" \
+    | egrep -o '"v[0-9][^"]+"' \
+    | egrep -o '[^"]+')
+  TOOLS_URL="https://github.com/Toktok/hs-tools/releases/download/$VERSION/hs-tools-$VERSION.tar.gz"
+  curl -L -s "$TOOLS_URL" | tar xz -C "$HOME"
+  
+  # Where to find libraries.
+  export LD_LIBRARY_PATH=$HOME/.local/lib
+  export PKG_CONFIG_PATH=$HOME/.local/lib/pkgconfig
+  
+  NEED_SODIUM=$(stack ls dependencies --test | grep saltine > /dev/null && echo 1)
+  NEED_TOXCORE=$(grep 'extra-libraries:.*toxcore' *.cabal > /dev/null && echo 1)
+  
+  if [ -n "$NEED_SODIUM" ]; then
+    NEED_TOXCORE=1
+  fi
+  
+  # libsodium
+  if [ "$NEED_SODIUM" == 1 -a ! -f $HOME/.local/lib/libsodium.so ]; then
+    git clone --depth=1 --branch=stable https://github.com/jedisct1/libsodium
+    cd libsodium
+    ./configure --prefix=$HOME/.local
+    make install -j$(nproc)
+  fi
+  
+  # c-toxcore
+  if [ "$NEED_SODIUM" == 1 -a ! -f $HOME/.local/lib/libtoxcore.so ]; then
+    git clone --depth=1 https://github.com/TokTok/c-toxcore
+    cd c-toxcore
+    cmake -B_build -H. -DCMAKE_INSTALL_PREFIX:PATH=$HOME/.local -DBUILD_TOXAV=0
+    make -C_build install -j$(nproc)
+  fi
+  
+  # Run the build/test/deploy (optional) cycle.
+  hlint .
+  stylish-haskell-lhs -i .
+  git diff --exit-code
+  stack --no-terminal test --coverage \
+    --extra-include-dirs=$HOME/.local/include \
+    --extra-lib-dirs=$HOME/.local/lib
+  shc "$PACKAGE" testsuite
+  stack sdist --tar-dir .
+}
+
+# Usage: eval $(travis-haskell env)
+travis-env() {
+  # Check that the tag we're building and trying to release agrees with the
+  # version number in Cabal.
+  if [ -n "$TRAVIS_TAG" ]; then
+    VERSION="${TRAVIS_TAG/v/}"
+    if [ ! -f "$PACKAGE-$VERSION.tar.gz" ]; then
+      echo 'echo "Package versions or name mismatch"'
+      echo 'ls'
+      echo 'exit 1'
+      exit 1
+    fi
+  else
+    VERSION=""
+  fi
+  
+  # Export variables here to make them available in the deploy step.
+  cat <<EOF
+export PACKAGE="$PACKAGE"
+export VERSION="$VERSION"
+EOF
+}
+
+# Usage: travis-haskell deploy
+travis-deploy() {
+  # No "set -x" here, because we don't want to print the username/password on the
+  # Travis console.
+  set +x
+  
+  mkdir -p "$HOME/.stack/upload"
+  echo "{\"username\":\"$HACKAGE_USERNAME\",\"password\":\"$HACKAGE_PASSWORD\"}" \
+    > "$HOME/.stack/upload/credentials.json"
+  stack --no-terminal upload .
+}
+
+travis-$1
