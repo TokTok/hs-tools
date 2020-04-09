@@ -2,4 +2,5 @@
 packages: []
 resolver: lts-15.2
 extra-deps:
+  - docopt-0.7.0.5@sha256:0ff280d90aa667350f743623708107bdef427a49b64b1bdf3df15905d8cbe345,3540
   - stylish-haskell-0.11.0.0
