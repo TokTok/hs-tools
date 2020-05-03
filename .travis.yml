@@ -8,27 +8,30 @@ cache:
     - "$HOME/.stack"
 
 script:
-  - export HOST=x86_64-linux
+  # GHC and Stack have different ways of expressing the host machine.
+  - export MACHINE=$(uname -m)
+  - export GHC_HOST=$MACHINE-linux
+  - export STACK_HOST=linux-$MACHINE
+  # Create output directory and install tools into it.
   - mkdir -p ~/.local/bin
   - export PATH=$HOME/.local/bin:$PATH
-  - travis_retry curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
-  - stack --no-terminal install hlint pandoc stylish-haskell happy
-  - travis_retry curl -L https://github.com/rubik/stack-hpc-coveralls/releases/download/v0.0.4.0/shc-linux-x64-8.0.1.tar.bz2 | tar -xj -C $HOME/.local/bin
+  - travis_retry curl -L https://get.haskellstack.org/stable/$STACK_HOST.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
+  - stack --no-terminal install hlint pandoc stylish-haskell happy stack-hpc-coveralls
   - cp -a bin $HOME/.local/
   # TODO(iphydf): Figure out how to do this more generically. How were we supposed
   # to know that this file is needed and can be found here?
-  - cp $HOME/.stack/snapshots/$HOST/*/8.8.2/share/$HOST-ghc-8.8.2/hlint-2.2.11/hlint.yaml $HOME/.local/bin/data/
-  - (WORK=`pwd` && cd $HOME && tar zcf $WORK/ci-tools-$HOST-$TRAVIS_TAG.tar.gz -C $HOME
+  - cp $HOME/.stack/snapshots/$GHC_HOST/*/8.8.2/share/$GHC_HOST-ghc-8.8.2/hlint-2.2.11/hlint.yaml $HOME/.local/bin/data/
+  - (WORK=`pwd` && cd $HOME && tar zcf $WORK/ci-tools-$GHC_HOST-$TRAVIS_TAG.tar.gz -C $HOME
       .local/bin
-      .stack/snapshots/$HOST/*/8.8.2/share/$HOST-ghc-8.8.2/happy-1.19.12
-      .stack/snapshots/$HOST/*/8.8.2/share/$HOST-ghc-8.8.2/hlint-2.2.11
-      .stack/snapshots/$HOST/*/8.8.2/share/$HOST-ghc-8.8.2/pandoc-2.9.1.1)
+      .stack/snapshots/$GHC_HOST/*/8.8.2/share/$GHC_HOST-ghc-8.8.2/happy-1.19.12
+      .stack/snapshots/$GHC_HOST/*/8.8.2/share/$GHC_HOST-ghc-8.8.2/hlint-2.2.11
+      .stack/snapshots/$GHC_HOST/*/8.8.2/share/$GHC_HOST-ghc-8.8.2/pandoc-2.9.1.1)
 
 deploy:
   provider: releases
   token:
     secure: "W8KCVBdSuKq5p4wpHSMbkC+1R7yDuSK0RR8avlB+eqi3KeXIc/7Rya10vu62mZx86vVvkmwLcL9/gqKqDusoncbo/NVhdiReR8F52IDBl1amCqHcStFL1Wb9vN2hjX5a7X3IPan6i2ABKtuSmF62PwZro7GJhT6krVAjacrEyVMpE2amV3pVhX0RYMSz9Zc4oUNGC85+IsGvjlbH7pZ9Y/UbwRJP/BNAtkJFWrlZYR40iVEJWslhbb9t2ZLJbUwO7uqBMfGBqcA9JwtulKH+UdAoAVgBFUubF+Rf217FEwq1WtlPypXjy5ZHpogIwz2SvE4A41t9uychx9EGMv4R/vLCnElBU6fInEjGnrbGqxk6fEfLIOm7S2gcV1wdXEjkQFKnS6S7EnzI6DCm84mPQjYZ0Jq4nsm9a4yt8E7zMFHBOxoDm0XtQ/b36FY8UnoDXlWhxkctmy4H7Ta1IQQbjqrgkLCnTiouezJ16RoP3oyqW5liWTVB6xmTtOh+WY77nEVIHkT61/aCFytxv5j1r1VHLOvM7bsARrFergItN92UdMbI8uKnNbzZ49xQ2aNnZMn7ZiKKhHhzzQtK8PW8QXpMy1yhNlOmDIrURbOVTesHyp7+rYUVQsymy471wOnpPAjKsyz5ZOWCEo1pd8xEikRv/zwJvj4qkEO0ZHIF71c="
-  file: ci-tools-$HOST-$TRAVIS_TAG.tar.gz
+  file: ci-tools-$GHC_HOST-$TRAVIS_TAG.tar.gz
   on:
     repo: TokTok/ci-tools
     tags: true
