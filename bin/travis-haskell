@@ -13,7 +13,8 @@ set -eu
 # See below for documentation of each subcommand.
 
 # Determine the Haskell package we're building.
-PACKAGE=$(echo "$TRAVIS_REPO_SLUG" | sed -e 's|^[^/]*/hs-||')
+REPO_SLUG="${TRAVIS_REPO_SLUG:-$GITHUB_REPOSITORY}"
+PACKAGE=$(echo "$REPO_SLUG" | sed -e 's|^[^/]*/hs-||')
 
 # Usage: download [slug] [tool] [output-path] [host]
 #
