@@ -13,22 +13,23 @@ set -eu
 # See below for documentation of each subcommand.
 
 # Determine the Haskell package we're building.
-PACKAGE=$(echo "$TRAVIS_REPO_SLUG" | sed -e 's|^[^/]*/hs-||')
+REPO_SLUG="${TRAVIS_REPO_SLUG:-$GITHUB_REPOSITORY}"
+PACKAGE=$(echo "$REPO_SLUG" | sed -e 's|^[^/]*/hs-||')
 
 # Usage: download [slug] [tool] [output-path] [host]
 #
 # or: travis-haskell download TokTok/ci-tools ci-tools $HOME x86_64-linux
 travis-download() {
-  set -x  # Show execution trace.
-  SLUG="${1:-TokTok/ci-tools}"  # The user/repo on github.
-  TOOL="${2:-ci-tools}"         # The package name to download from the release.
-  ODIR="${3:-$HOME}"            # The output directory where to extract it.
-  HOST="${4:-x86_64-linux}"     # The host platform to download for.
+  set -x                       # Show execution trace.
+  SLUG="${1:-TokTok/ci-tools}" # The user/repo on github.
+  TOOL="${2:-ci-tools}"        # The package name to download from the release.
+  ODIR="${3:-$HOME}"           # The output directory where to extract it.
+  HOST="${4:-x86_64-linux}"    # The host platform to download for.
 
   # Install the latest CI support tools.
   VERSION=$(curl -L -s -H 'Accept: application/json' \
-    "https://github.com/$SLUG/releases/latest" \
-    | python3 -c 'import sys, json; print(json.loads(sys.stdin.read())["tag_name"])')
+    "https://github.com/$SLUG/releases/latest" |
+    python3 -c 'import sys, json; print(json.loads(sys.stdin.read())["tag_name"])')
   TOOLS_URL="https://github.com/$SLUG/releases/download/$VERSION/$TOOL-$HOST-$VERSION.tar.gz"
   curl -L -s "$TOOLS_URL" | tar xz -C "$ODIR"
 }
@@ -37,40 +38,40 @@ travis-download() {
 #
 # or, if you ran `travis-haskell download` before: travis-haskell script
 travis-script() {
-  set -x  # Show execution trace.
+  set -x # Show execution trace.
 
   travis-download
 
   # Where to find libraries.
-  export LD_LIBRARY_PATH=$HOME/.local/lib
-  export PKG_CONFIG_PATH=$HOME/.local/lib/pkgconfig
+  export LD_LIBRARY_PATH="$HOME"/.local/lib
+  export PKG_CONFIG_PATH="$HOME"/.local/lib/pkgconfig
 
-  NEED_SODIUM=$(stack ls dependencies --test | grep saltine > /dev/null && echo 1 || echo 0)
-  NEED_TOXCORE=$(grep 'extra-libraries:.*toxcore' *.cabal > /dev/null && echo 1 || echo 0)
+  NEED_SODIUM=$(stack ls dependencies --test | grep saltine >/dev/null && echo 1 || echo 0)
+  NEED_TOXCORE=$(grep 'extra-libraries:.*toxcore' *.cabal >/dev/null && echo 1 || echo 0)
 
   if [ "$NEED_TOXCORE" == 1 ]; then
     NEED_SODIUM=1
   fi
 
   # libsodium
-  if [ "$NEED_SODIUM" == 1 -a ! -f $HOME/.local/lib/libsodium.so ]; then
+  if [ "$NEED_SODIUM" == 1 -a ! -f "$HOME"/.local/lib/libsodium.so ]; then
     git clone --depth=1 --branch=stable https://github.com/jedisct1/libsodium
     pushd libsodium
-    ./configure --prefix=$HOME/.local
-    make install -j$(nproc)
+    ./configure --prefix="$HOME"/.local
+    make install -j"$(nproc)"
     popd
   fi
 
   # c-toxcore
-  if [ "$NEED_TOXCORE" == 1 -a ! -f $HOME/.local/lib/libtoxcore.so ]; then
+  if [ "$NEED_TOXCORE" == 1 -a ! -f "$HOME"/.local/lib/libtoxcore.so ]; then
     git clone --depth=1 https://github.com/TokTok/c-toxcore
     pushd c-toxcore
-    cmake -B_build -H. -DCMAKE_INSTALL_PREFIX:PATH=$HOME/.local \
+    cmake -B_build -H. -DCMAKE_INSTALL_PREFIX:PATH="$HOME"/.local \
       -DBUILD_TOXAV=OFF \
       -DBOOTSTRAP_DAEMON=OFF \
       -DAUTOTEST=OFF \
       -DDHT_BOOTSTRAP=OFF
-    make -C_build install -j$(nproc)
+    make -C_build install -j"$(nproc)"
     popd
   fi
 
@@ -79,8 +80,8 @@ travis-script() {
   stylish-haskell-lhs -i .
   git diff --exit-code
   stack --no-terminal test --coverage \
-    --extra-include-dirs=$HOME/.local/include \
-    --extra-lib-dirs=$HOME/.local/lib
+    --extra-include-dirs="$HOME"/.local/include \
+    --extra-lib-dirs="$HOME"/.local/lib
   shc "$PACKAGE" testsuite
   stack sdist --tar-dir .
 }
@@ -116,7 +117,7 @@ travis-deploy() {
 
   mkdir -p "$HOME/.stack/upload"
   echo "{\"username\":\"$HACKAGE_USERNAME\",\"password\":\"$HACKAGE_PASSWORD\"}" \
-    > "$HOME/.stack/upload/credentials.json"
+    >"$HOME/.stack/upload/credentials.json"
   stack --no-terminal upload .
 }
 
