@@ -43,8 +43,8 @@ travis-script() {
   travis-download
 
   # Where to find libraries.
-  export LD_LIBRARY_PATH=$HOME/.local/lib
-  export PKG_CONFIG_PATH=$HOME/.local/lib/pkgconfig
+  export LD_LIBRARY_PATH="$HOME"/.local/lib
+  export PKG_CONFIG_PATH="$HOME"/.local/lib/pkgconfig
 
   NEED_SODIUM=$(stack ls dependencies --test | grep saltine > /dev/null && echo 1 || echo 0)
   NEED_TOXCORE=$(grep 'extra-libraries:.*toxcore' *.cabal > /dev/null && echo 1 || echo 0)
@@ -54,24 +54,24 @@ travis-script() {
   fi
 
   # libsodium
-  if [ "$NEED_SODIUM" == 1 -a ! -f $HOME/.local/lib/libsodium.so ]; then
+  if [ "$NEED_SODIUM" == 1 -a ! -f "$HOME"/.local/lib/libsodium.so ]; then
     git clone --depth=1 --branch=stable https://github.com/jedisct1/libsodium
     pushd libsodium
-    ./configure --prefix=$HOME/.local
-    make install -j$(nproc)
+    ./configure --prefix="$HOME"/.local
+    make install -j"$(nproc)"
     popd
   fi
 
   # c-toxcore
-  if [ "$NEED_TOXCORE" == 1 -a ! -f $HOME/.local/lib/libtoxcore.so ]; then
+  if [ "$NEED_TOXCORE" == 1 -a ! -f "$HOME"/.local/lib/libtoxcore.so ]; then
     git clone --depth=1 https://github.com/TokTok/c-toxcore
     pushd c-toxcore
-    cmake -B_build -H. -DCMAKE_INSTALL_PREFIX:PATH=$HOME/.local \
+    cmake -B_build -H. -DCMAKE_INSTALL_PREFIX:PATH="$HOME"/.local \
       -DBUILD_TOXAV=OFF \
       -DBOOTSTRAP_DAEMON=OFF \
       -DAUTOTEST=OFF \
       -DDHT_BOOTSTRAP=OFF
-    make -C_build install -j$(nproc)
+    make -C_build install -j"$(nproc)"
     popd
   fi
 
@@ -80,8 +80,8 @@ travis-script() {
   stylish-haskell-lhs -i .
   git diff --exit-code
   stack --no-terminal test --coverage \
-    --extra-include-dirs=$HOME/.local/include \
-    --extra-lib-dirs=$HOME/.local/lib
+    --extra-include-dirs="$HOME"/.local/include \
+    --extra-lib-dirs="$HOME"/.local/lib
   shc "$PACKAGE" testsuite
   stack sdist --tar-dir .
 }
